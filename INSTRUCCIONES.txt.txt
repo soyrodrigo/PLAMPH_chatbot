@@ -1,0 +1,122 @@
+# 🏭 INSTRUCCIONES PARA INSTALAR EL SISTEMA MODULAR
+
+## 📁 ESTRUCTURA DE CARPETAS A CREAR:
+
+```
+mi_proyecto/
+├── modules/
+│   ├── __init__.py          ← Descargar y poner aquí
+│   ├── config.py            ← Descargar y poner aquí  
+│   ├── excel_manager.py     ← Descargar y poner aquí
+│   └── graphics_generator.py ← Descargar y poner aquí
+└── test_simple.py           ← Descargar y poner aquí
+```
+
+## 🚀 PASO A PASO:
+
+### **PASO 1: Crear carpetas**
+```bash
+mkdir mi_proyecto
+cd mi_proyecto
+mkdir modules
+```
+
+### **PASO 2: Descargar archivos**
+1. Descarga **__init__.py** → Ponlo en la carpeta `modules/`
+2. Descarga **config.py** → Ponlo en la carpeta `modules/`
+3. Descarga **excel_manager.py** → Ponlo en la carpeta `modules/`
+4. Descarga **graphics_generator.py** → Ponlo en la carpeta `modules/`
+5. Descarga **test_simple.py** → Ponlo en la carpeta principal `mi_proyecto/`
+
+### **PASO 3: Instalar dependencias**
+```bash
+pip install openpyxl matplotlib
+```
+
+### **PASO 4: Probar el sistema**
+```bash
+cd mi_proyecto
+python test_simple.py
+```
+
+## ✅ QUÉ DEBERÍA PASAR:
+
+Si todo está bien configurado, verás:
+```
+🧪 === PRUEBA SIMPLE DE MÓDULOS ===
+⏰ 21/06/2025 14:30:45
+
+1️⃣ Probando importaciones...
+   ✅ config.py importado
+   ✅ excel_manager.py importado
+   ✅ graphics_generator.py importado
+   ⚠️ menu_controller.py no encontrado (crear después)
+   ⚠️ pdf_creator.py no encontrado (crear después)
+
+2️⃣ Probando funciones básicas...
+📁 Directorio creado: datos
+📁 Directorio creado: graficas
+📁 Directorio creado: reportes
+📄 Creando archivo: datos/inventario_materiales.xlsx
+✅ Estructura de materiales creada: datos/inventario_materiales.xlsx
+📄 Creando archivo: datos/inventario_equipos.xlsx
+✅ Estructura de equipos creada: datos/inventario_equipos.xlsx
+📄 Creando archivo: datos/registro_produccion.xlsx
+✅ Estructura de producción creada: datos/registro_produccion.xlsx
+   ✅ Archivos Excel verificados/creados
+   ✅ Guardado de material funciona
+   ✅ Stock obtenido: 1 materiales
+
+3️⃣ Probando gráficas...
+✅ Matplotlib cargado para gráficos
+📊 Leyendo archivo con 5 filas
+🔍 Movimientos gasolina: 0
+🔍 Movimientos diesel: 0
+📊 No hay datos reales, usando datos de ejemplo
+   ✅ Gráfica generada: combustibles_20250621_143045.png
+
+✅ === PRUEBA COMPLETADA ===
+🎯 Los módulos básicos funcionan correctamente
+💡 Ahora puedes crear los módulos restantes
+
+🚀 ¡Sistema listo para continuar!
+```
+
+## 📂 DIRECTORIOS QUE SE CREAN AUTOMÁTICAMENTE:
+
+- `datos/` - Archivos Excel con los inventarios
+- `graficas/` - Gráficas generadas 
+- `reportes/` - Reportes PDF (cuando se cree el módulo)
+
+## 🔧 SI HAY ERRORES:
+
+### Error de importación:
+- Verifica que la carpeta `modules` existe
+- Verifica que `__init__.py` está en `modules/`
+- Verifica que estás ejecutando desde la carpeta correcta
+
+### Error de matplotlib:
+```bash
+pip install matplotlib
+```
+
+### Error de openpyxl:
+```bash
+pip install openpyxl
+```
+
+## 🎯 SIGUIENTES PASOS:
+
+Una vez que `test_simple.py` funcione correctamente, podremos agregar:
+- `menu_controller.py` (menús interactivos)
+- `pdf_creator.py` (reportes PDF)
+- `main_modular.py` (aplicación principal)
+
+## 💡 NOTAS IMPORTANTES:
+
+1. **Nombres exactos**: Usa exactamente los nombres de archivo que se indican
+2. **Estructura**: Respeta la estructura de carpetas
+3. **Orden**: Descarga y prueba estos archivos antes de continuar
+4. **Dependencias**: Instala openpyxl y matplotlib antes de probar
+
+¡Cuando tengas esto funcionando, me avisas para continuar con los módulos restantes!

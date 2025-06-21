@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "proyecto_chat_bot"
+		},
+		{
+			"path": "graficas"
+		},
+		{
+			"path": "reportes"
+		},
+		{
+			"path": "datos"
+		},
+		{
+			"path": "fotos_planta"
+		}
+	],
+	"settings": {}
+}
