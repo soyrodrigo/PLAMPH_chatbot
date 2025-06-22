@@ -326,8 +326,8 @@ class GraphicsGenerator:
                         print(f"   📦 Cemento encontrado en fila {row}: {material} | {movimiento} | {cantidad}")
                         
                         # Solo procesar salidas (consumo)
-                        if movimiento and "salida" in str(movimiento).lower():
-                            
+                        movimiento_limpio = str(movimiento).lower().replace("📉", "").strip()
+                        if "salida" in movimiento_limpio:    
                             # Procesar fecha
                             if isinstance(fecha, datetime):
                                 fecha_str = fecha.strftime("%d/%m")
