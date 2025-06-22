@@ -238,8 +238,7 @@ class GraphicsGenerator:
     @staticmethod
     def obtener_datos_cemento():
         """
-        Obtiene datos de consumo de cemento por fecha
-        CORREGIDO: Búsqueda mejorada con emojis
+        Obtiene datos de consumo de cemento - CORREGIDO PARA TU ARCHIVO
         """
         archivo = GraphicsGenerator._buscar_archivo_materiales()
         if not archivo:
@@ -249,12 +248,12 @@ class GraphicsGenerator:
             libro = openpyxl.load_workbook(archivo)
             hoja = libro.active
             
-            print(f"📊 Buscando cemento en {hoja.max_row} filas...")
+            print(f"📊 Buscando cemento desde fila 4 hasta fila {hoja.max_row}...")
             
             consumo_por_fecha = {}
             
-            # Leer desde fila 5 (después de encabezados)
-            for row in range(5, hoja.max_row + 1):
+            # CORREGIDO: Empezar desde fila 4 (donde están tus datos)
+            for row in range(4, hoja.max_row + 1):
                 try:
                     fecha = hoja.cell(row=row, column=1).value      # Columna A: Fecha
                     material = hoja.cell(row=row, column=3).value   # Columna C: Material
@@ -264,15 +263,23 @@ class GraphicsGenerator:
                     if not material or not movimiento or not cantidad:
                         continue
                     
-                    # CORRECCIÓN: Buscar cemento (insensible a mayúsculas)
+                    # CORREGIDO: Buscar cemento (más flexible)
                     material_texto = str(material).lower().strip()
                     if "cemento" not in material_texto:
                         continue
                     
-                    # CORRECCIÓN: Buscar solo salidas (consumo) con emojis
+                    print(f"   📦 Cemento encontrado en fila {row}: {material}")
+                    
+                    # CORREGIDO: Buscar salidas (más flexible)
                     movimiento_texto = str(movimiento).strip()
-                    es_salida = ("📉" in movimiento_texto or 
-                               "salida" in movimiento_texto.lower())
+                    es_salida = (
+                        "📉" in movimiento_texto or 
+                        "salida" in movimiento_texto.lower() or
+                        "consumo" in movimiento_texto.lower() or
+                        "uso" in movimiento_texto.lower()
+                    )
+                    
+                    print(f"      Movimiento: '{movimiento_texto}' -> ¿Es salida? {es_salida}")
                     
                     if not es_salida:
                         continue
@@ -281,6 +288,7 @@ class GraphicsGenerator:
                     try:
                         cantidad_num = float(str(cantidad).replace(",", "."))
                     except:
+                        print(f"      ❌ Error con cantidad: {cantidad}")
                         continue
                     
                     # Procesar fecha
@@ -294,12 +302,12 @@ class GraphicsGenerator:
                         consumo_por_fecha[fecha_str] = 0
                     
                     consumo_por_fecha[fecha_str] += cantidad_num
-                    print(f"   🏗️ Cemento {fecha_str}: +{cantidad_num} bolsas")
+                    print(f"      ✅ Registrado: {fecha_str} = +{cantidad_num} bolsas")
                     
                 except Exception as e:
                     continue
             
-            print(f"📊 Días con consumo de cemento: {len(consumo_por_fecha)}")
+            print(f"\n📊 Días con consumo de cemento: {len(consumo_por_fecha)}")
             return consumo_por_fecha
             
         except Exception as e:
