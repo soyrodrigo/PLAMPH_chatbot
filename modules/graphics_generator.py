@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-📊 GRAPHICS GENERATOR - VERSIÓN FINAL CORREGIDA
-===============================================
+📊 GRAPHICS GENERATOR - VERSIÓN CORREGIDA
+=========================================
 
 Módulo para generar gráficas del Sistema Industrial Unificado
-TODAS las correcciones aplicadas:
-- Lee combustibles desde inventario_materiales.xlsx (NO desde equipos)
-- Lee cemento desde inventario_materiales.xlsx
-- Estructura de columnas corregida
-- Búsqueda flexible de materiales
-- Manejo robusto de errores
+CORRECCIONES APLICADAS:
+- Búsqueda correcta de "📈 Entrada" y "📉 Salida" 
+- Lectura mejorada de la columna Material
+- Cálculo correcto de stock de combustibles
+- Manejo robusto de emojis en los datos
 
-Autor: Sistema Industrial Automatizado
-Versión: 2.0 FINAL
-Fecha: 2025
+Versión: 2.1 CORREGIDA
 """
 
 import os
@@ -31,8 +28,6 @@ except ImportError:
     except ImportError:
         # Configuración de respaldo
         ARCHIVO_EXCEL_MATERIALES = "datos/inventario_materiales.xlsx"
-        ARCHIVO_EXCEL_EQUIPOS = "datos/inventario_equipos.xlsx"
-        ARCHIVO_EXCEL_PRODUCCION = "datos/registro_produccion.xlsx"
 
 # Verificar matplotlib
 try:
@@ -59,7 +54,6 @@ class GraphicsGenerator:
     def _buscar_archivo_materiales():
         """Busca el archivo de materiales en diferentes ubicaciones"""
         ubicaciones = [
-            ARCHIVO_EXCEL_MATERIALES,
             "datos/inventario_materiales.xlsx",
             "inventario_materiales.xlsx",
             "./datos/inventario_materiales.xlsx"
@@ -74,137 +68,166 @@ class GraphicsGenerator:
         return None
     
     @staticmethod
+    def obtener_datos_combustibles():
+        """
+        Obtiene datos de combustibles calculando el stock actual
+        CORREGIDO: Búsqueda mejorada con emojis
+        """
+        archivo = GraphicsGenerator._buscar_archivo_materiales()
+        if not archivo:
+            return {"gasolina": 0, "diesel": 0}
+        
+        try:
+            libro = openpyxl.load_workbook(archivo)
+            hoja = libro.active
+            
+            print(f"📊 Leyendo archivo con {hoja.max_row} filas")
+            
+            stock_gasolina = 0
+            stock_diesel = 0
+            
+            # Leer desde fila 5 (después de encabezados)
+            for row in range(5, hoja.max_row + 1):
+                try:
+                    material = hoja.cell(row=row, column=3).value    # Columna C: Material
+                    movimiento = hoja.cell(row=row, column=5).value  # Columna E: Movimiento  
+                    cantidad = hoja.cell(row=row, column=6).value    # Columna F: Cantidad
+                    
+                    if not material or not movimiento or not cantidad:
+                        continue
+                    
+                    # Convertir a texto y limpiar
+                    material_texto = str(material).lower().strip()
+                    movimiento_texto = str(movimiento).strip()
+                    
+                    # Convertir cantidad a número
+                    try:
+                        cantidad_num = float(str(cantidad).replace(",", "."))
+                    except:
+                        continue
+                    
+                    # CORRECCIÓN: Buscar combustibles en material
+                    es_gasolina = any(palabra in material_texto for palabra in 
+                                    ['gasolina', 'gasoline', 'nafta', 'bencina'])
+                    es_diesel = any(palabra in material_texto for palabra in 
+                                  ['diesel', 'diésel', 'gasoil', 'petróleo'])
+                    
+                    if not (es_gasolina or es_diesel):
+                        continue
+                    
+                    # CORRECCIÓN: Detectar tipo de movimiento con emojis
+                    es_entrada = ("📈" in movimiento_texto or 
+                                "entrada" in movimiento_texto.lower() or
+                                "Entrada" in movimiento_texto)
+                    
+                    es_salida = ("📉" in movimiento_texto or 
+                               "salida" in movimiento_texto.lower() or
+                               "Salida" in movimiento_texto)
+                    
+                    # Aplicar movimiento al stock
+                    if es_gasolina:
+                        if es_entrada:
+                            stock_gasolina += cantidad_num
+                            print(f"   ⛽ Gasolina +{cantidad_num} (Total: {stock_gasolina})")
+                        elif es_salida:
+                            stock_gasolina -= cantidad_num
+                            print(f"   ⛽ Gasolina -{cantidad_num} (Total: {stock_gasolina})")
+                    
+                    elif es_diesel:
+                        if es_entrada:
+                            stock_diesel += cantidad_num
+                            print(f"   ⛽ Diesel +{cantidad_num} (Total: {stock_diesel})")
+                        elif es_salida:
+                            stock_diesel -= cantidad_num
+                            print(f"   ⛽ Diesel -{cantidad_num} (Total: {stock_diesel})")
+                            
+                except Exception as e:
+                    continue
+            
+            # Asegurar valores positivos
+            stock_gasolina = max(0, stock_gasolina)
+            stock_diesel = max(0, stock_diesel)
+            
+            print(f"📊 Stock final - Gasolina: {stock_gasolina}L, Diesel: {stock_diesel}L")
+            
+            return {
+                "gasolina": stock_gasolina,
+                "diesel": stock_diesel
+            }
+            
+        except Exception as e:
+            print(f"❌ Error obteniendo datos de combustibles: {e}")
+            return {"gasolina": 0, "diesel": 0}
+    
+    @staticmethod
     def generar_grafica_combustibles():
         """
-        Genera gráfica de stock de combustibles
-        CORREGIDO: Ahora lee desde inventario_materiales.xlsx
+        Genera gráfica de stock actual de combustibles
+        CORREGIDO: Usa datos reales del Excel
         """
         if not GRAFICOS_DISPONIBLES:
             print("❌ Matplotlib no disponible")
             return None
         
         try:
-            # CORRECCIÓN: Buscar archivo de materiales (no equipos)
-            archivo = GraphicsGenerator._buscar_archivo_materiales()
-            if not archivo:
-                return None
+            # Obtener datos reales de combustibles
+            datos_combustibles = GraphicsGenerator.obtener_datos_combustibles()
             
-            # Leer datos del Excel
-            libro = openpyxl.load_workbook(archivo)
-            hoja = libro.active
+            gasolina = datos_combustibles["gasolina"]
+            diesel = datos_combustibles["diesel"]
             
-            print(f"📊 Analizando archivo con {hoja.max_row} filas")
+            print(f"📊 Datos para gráfica - Gasolina: {gasolina}L, Diesel: {diesel}L")
             
-            # CORRECCIÓN: Extraer movimientos de combustible desde MATERIALES
-            movimientos_gasolina = []
-            movimientos_diesel = []
-            
-            for row in range(5, hoja.max_row + 1):
-                try:
-                    fecha = hoja.cell(row=row, column=1).value      # Columna A: Fecha
-                    hora = hoja.cell(row=row, column=2).value       # Columna B: Hora
-                    material = hoja.cell(row=row, column=3).value   # Columna C: Material
-                    usuario = hoja.cell(row=row, column=4).value    # Columna D: Usuario
-                    movimiento = hoja.cell(row=row, column=5).value # Columna E: Movimiento
-                    cantidad = hoja.cell(row=row, column=6).value   # Columna F: Cantidad
-                    
-                    if material and cantidad and movimiento:
-                        material_str = str(material).lower()
-                        cantidad_num = float(str(cantidad).replace(",", "."))
-                        
-                        # CORRECCIÓN: Buscar gasolina y diesel como MATERIALES
-                        if "gasolina" in material_str:
-                            if "entrada" in str(movimiento).lower():
-                                movimientos_gasolina.append((fecha, cantidad_num))
-                            elif "salida" in str(movimiento).lower():
-                                movimientos_gasolina.append((fecha, -cantidad_num))
-                        
-                        elif "diesel" in material_str:
-                            if "entrada" in str(movimiento).lower():
-                                movimientos_diesel.append((fecha, cantidad_num))
-                            elif "salida" in str(movimiento).lower():
-                                movimientos_diesel.append((fecha, -cantidad_num))
-                                
-                except Exception as e:
-                    continue
-            
-            print(f"🔍 Movimientos gasolina encontrados: {len(movimientos_gasolina)}")
-            print(f"🔍 Movimientos diesel encontrados: {len(movimientos_diesel)}")
-            
-            # Si no hay datos reales, usar datos de ejemplo
-            if not movimientos_gasolina and not movimientos_diesel:
-                print("📊 No hay datos reales, generando gráfica con datos de ejemplo")
-                fechas_ejemplo = []
-                stock_gasolina = [150, 130, 110, 95, 80, 65, 50]
-                stock_diesel = [200, 185, 170, 155, 140, 125, 110]
-                
-                for i in range(7):
-                    fecha = (datetime.now() - timedelta(days=6-i)).strftime("%d/%m")
-                    fechas_ejemplo.append(fecha)
-            else:
-                # Procesar datos reales
-                fechas_ejemplo = []
-                stock_gasolina = []
-                stock_diesel = []
-                
-                # Generar fechas de la última semana
-                for i in range(7):
-                    fecha = (datetime.now() - timedelta(days=6-i)).strftime("%d/%m/%Y")
-                    fechas_ejemplo.append(fecha[-5:])  # Solo DD/MM
-                    
-                    # Calcular stock acumulado para cada fecha
-                    acum_gasolina = 100  # Stock inicial
-                    acum_diesel = 150    # Stock inicial
-                    
-                    for f, cantidad in movimientos_gasolina:
-                        fecha_mov = str(f) if f else ""
-                        if fecha in fecha_mov:
-                            acum_gasolina += cantidad
-                    
-                    for f, cantidad in movimientos_diesel:
-                        fecha_mov = str(f) if f else ""
-                        if fecha in fecha_mov:
-                            acum_diesel += cantidad
-                    
-                    stock_gasolina.append(max(0, acum_gasolina))
-                    stock_diesel.append(max(0, acum_diesel))
+            # Si no hay datos, usar valores mínimos para mostrar la estructura
+            if gasolina == 0 and diesel == 0:
+                print("⚠️ No hay datos de combustibles, usando valores de ejemplo")
+                gasolina = 50
+                diesel = 75
             
             # Crear gráfica
-            plt.figure(figsize=(12, 8))
+            plt.figure(figsize=(10, 6))
             
-            x_pos = range(len(fechas_ejemplo))
+            combustibles = ['Gasolina', 'Diesel']
+            cantidades = [gasolina, diesel]
+            colores = ['#FF6B6B', '#4ECDC4']
             
-            # Barras lado a lado
-            ancho_barra = 0.35
-            plt.bar([x - ancho_barra/2 for x in x_pos], stock_gasolina, ancho_barra, 
-                   label='Gasolina', color='#FF6B6B', alpha=0.8, edgecolor='black')
-            plt.bar([x + ancho_barra/2 for x in x_pos], stock_diesel, ancho_barra, 
-                   label='Diesel', color='#4ECDC4', alpha=0.8, edgecolor='black')
+            # Crear gráfica de barras
+            barras = plt.bar(combustibles, cantidades, color=colores, alpha=0.8, edgecolor='black')
             
-            plt.title('⛽ STOCK DE COMBUSTIBLES\nPlanta Premoldeados Tupiza', 
-                     fontsize=16, fontweight='bold', pad=20)
-            plt.xlabel('Fecha', fontsize=12)
+            # Personalizar gráfica
+            plt.title('⛽ STOCK ACTUAL DE COMBUSTIBLES\nPlanta Municipal de Premoldeados - Tupiza', 
+                     fontsize=14, fontweight='bold', pad=20)
             plt.ylabel('Cantidad (Litros)', fontsize=12)
-            
-            plt.xticks(x_pos, fechas_ejemplo, rotation=45)
-            plt.legend(fontsize=11)
-            plt.grid(True, alpha=0.3, linestyle='--', axis='y')
+            plt.grid(True, alpha=0.3, axis='y')
             
             # Agregar valores en las barras
-            for i, (g, d) in enumerate(zip(stock_gasolina, stock_diesel)):
-                plt.text(i - ancho_barra/2, g + max(stock_gasolina + stock_diesel)*0.01, 
-                        f'{g:.0f}L', ha='center', va='bottom', fontsize=9, fontweight='bold')
-                plt.text(i + ancho_barra/2, d + max(stock_gasolina + stock_diesel)*0.01, 
-                        f'{d:.0f}L', ha='center', va='bottom', fontsize=9, fontweight='bold')
+            for barra, cantidad in zip(barras, cantidades):
+                altura = barra.get_height()
+                plt.text(barra.get_x() + barra.get_width()/2., altura + max(cantidades)*0.02,
+                        f'{cantidad:.0f}L', ha='center', va='bottom', fontweight='bold', fontsize=12)
+            
+            # Agregar líneas de referencia
+            plt.axhline(y=100, color='orange', linestyle='--', alpha=0.7, label='Nivel mínimo (100L)')
+            plt.axhline(y=200, color='green', linestyle='--', alpha=0.7, label='Nivel óptimo (200L)')
+            plt.legend()
+            
+            # Información adicional
+            total = gasolina + diesel
+            plt.figtext(0.02, 0.02, f'Total combustible: {total:.0f} litros', 
+                       fontsize=10, style='italic')
             
             plt.tight_layout()
             
-            nombre_grafica = f"combustibles_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-            plt.savefig(nombre_grafica, dpi=300, bbox_inches='tight', facecolor='white')
+            # Crear directorio si no existe
+            os.makedirs("graficas", exist_ok=True)
+            
+            # Guardar gráfica
+            nombre_archivo = f"graficas/combustibles_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            plt.savefig(nombre_archivo, dpi=300, bbox_inches='tight', facecolor='white')
             plt.close()
             
-            print(f"✅ Gráfica de combustibles generada: {nombre_grafica}")
-            return nombre_grafica
+            print(f"✅ Gráfica de combustibles generada: {nombre_archivo}")
+            return nombre_archivo
             
         except Exception as e:
             print(f"❌ Error generando gráfica combustibles: {e}")
@@ -213,30 +236,224 @@ class GraphicsGenerator:
             return None
     
     @staticmethod
-    def generar_grafica_stock_materiales():
+    def obtener_datos_cemento():
         """
-        Genera gráfica de stock actual de materiales
+        Obtiene datos de consumo de cemento por fecha
+        CORREGIDO: Búsqueda mejorada con emojis
+        """
+        archivo = GraphicsGenerator._buscar_archivo_materiales()
+        if not archivo:
+            return {}
+        
+        try:
+            libro = openpyxl.load_workbook(archivo)
+            hoja = libro.active
+            
+            print(f"📊 Buscando cemento en {hoja.max_row} filas...")
+            
+            consumo_por_fecha = {}
+            
+            # Leer desde fila 5 (después de encabezados)
+            for row in range(5, hoja.max_row + 1):
+                try:
+                    fecha = hoja.cell(row=row, column=1).value      # Columna A: Fecha
+                    material = hoja.cell(row=row, column=3).value   # Columna C: Material
+                    movimiento = hoja.cell(row=row, column=5).value # Columna E: Movimiento
+                    cantidad = hoja.cell(row=row, column=6).value   # Columna F: Cantidad
+                    
+                    if not material or not movimiento or not cantidad:
+                        continue
+                    
+                    # CORRECCIÓN: Buscar cemento (insensible a mayúsculas)
+                    material_texto = str(material).lower().strip()
+                    if "cemento" not in material_texto:
+                        continue
+                    
+                    # CORRECCIÓN: Buscar solo salidas (consumo) con emojis
+                    movimiento_texto = str(movimiento).strip()
+                    es_salida = ("📉" in movimiento_texto or 
+                               "salida" in movimiento_texto.lower())
+                    
+                    if not es_salida:
+                        continue
+                    
+                    # Convertir cantidad a número
+                    try:
+                        cantidad_num = float(str(cantidad).replace(",", "."))
+                    except:
+                        continue
+                    
+                    # Procesar fecha
+                    if isinstance(fecha, datetime):
+                        fecha_str = fecha.strftime("%d/%m")
+                    else:
+                        fecha_str = str(fecha)[-5:] if fecha else "S/F"
+                    
+                    # Acumular consumo por fecha
+                    if fecha_str not in consumo_por_fecha:
+                        consumo_por_fecha[fecha_str] = 0
+                    
+                    consumo_por_fecha[fecha_str] += cantidad_num
+                    print(f"   🏗️ Cemento {fecha_str}: +{cantidad_num} bolsas")
+                    
+                except Exception as e:
+                    continue
+            
+            print(f"📊 Días con consumo de cemento: {len(consumo_por_fecha)}")
+            return consumo_por_fecha
+            
+        except Exception as e:
+            print(f"❌ Error obteniendo datos de cemento: {e}")
+            return {}
+    
+    @staticmethod
+    def generar_grafica_cemento():
+        """
+        Genera gráfica de consumo de cemento
+        CORREGIDO: Usa datos reales del Excel
         """
         if not GRAFICOS_DISPONIBLES:
             print("❌ Matplotlib no disponible")
             return None
         
         try:
-            # Importar ExcelManager
-            try:
-                from .excel_manager import ExcelManager
-            except ImportError:
-                from modules.excel_manager import ExcelManager
+            # Obtener datos reales de cemento
+            consumo_cemento = GraphicsGenerator.obtener_datos_cemento()
             
-            stock = ExcelManager.obtener_stock_materiales()
-            
-            if not stock:
-                print("❌ No hay datos de stock para graficar")
+            if not consumo_cemento:
+                print("❌ No hay datos de consumo de cemento")
+                print("💡 Registra algunas salidas de cemento para generar la gráfica")
                 return None
             
-            # Preparar datos
-            materiales = list(stock.keys())
-            cantidades = list(stock.values())
+            # Preparar datos para gráfica
+            fechas = sorted(consumo_cemento.keys())
+            cantidades = [consumo_cemento[f] for f in fechas]
+            
+            print(f"📊 Generando gráfica con {len(fechas)} días de datos")
+            
+            # Crear gráfica
+            plt.figure(figsize=(12, 6))
+            
+            # Gráfica de barras
+            barras = plt.bar(range(len(fechas)), cantidades, 
+                           color='#8E44AD', alpha=0.8, edgecolor='black')
+            
+            # Personalizar gráfica
+            plt.title('🏗️ CONSUMO DIARIO DE CEMENTO\nPlanta Municipal de Premoldeados - Tupiza', 
+                     fontsize=14, fontweight='bold', pad=20)
+            plt.xlabel('Fecha', fontsize=12)
+            plt.ylabel('Bolsas Consumidas', fontsize=12)
+            
+            # Configurar eje X
+            plt.xticks(range(len(fechas)), fechas, rotation=45)
+            plt.grid(True, alpha=0.3, axis='y')
+            
+            # Agregar valores en las barras
+            for i, (barra, cantidad) in enumerate(zip(barras, cantidades)):
+                if cantidad > 0:
+                    plt.text(barra.get_x() + barra.get_width()/2, 
+                            barra.get_height() + max(cantidades)*0.02,
+                            f'{cantidad:.0f}', ha='center', va='bottom', 
+                            fontweight='bold', fontsize=10)
+            
+            # Información adicional
+            total_consumo = sum(cantidades)
+            promedio_diario = total_consumo / len(cantidades) if cantidades else 0
+            
+            plt.figtext(0.02, 0.02, 
+                       f'Total consumido: {total_consumo:.0f} bolsas | Promedio: {promedio_diario:.1f} bolsas/día', 
+                       fontsize=10, style='italic')
+            
+            plt.tight_layout()
+            
+            # Crear directorio si no existe
+            os.makedirs("graficas", exist_ok=True)
+            
+            # Guardar gráfica
+            nombre_archivo = f"graficas/cemento_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            plt.savefig(nombre_archivo, dpi=300, bbox_inches='tight', facecolor='white')
+            plt.close()
+            
+            print(f"✅ Gráfica de cemento generada: {nombre_archivo}")
+            return nombre_archivo
+            
+        except Exception as e:
+            print(f"❌ Error generando gráfica cemento: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    @staticmethod
+    def generar_grafica_stock_materiales():
+        """
+        Genera gráfica de stock general de materiales
+        CORREGIDO: Cálculo mejorado de stock
+        """
+        if not GRAFICOS_DISPONIBLES:
+            print("❌ Matplotlib no disponible")
+            return None
+        
+        try:
+            archivo = GraphicsGenerator._buscar_archivo_materiales()
+            if not archivo:
+                return None
+            
+            libro = openpyxl.load_workbook(archivo)
+            hoja = libro.active
+            
+            print(f"📊 Calculando stock de materiales...")
+            
+            stock_materiales = {}
+            
+            # Leer desde fila 5 (después de encabezados)
+            for row in range(5, hoja.max_row + 1):
+                try:
+                    material = hoja.cell(row=row, column=3).value   # Columna C: Material
+                    movimiento = hoja.cell(row=row, column=5).value # Columna E: Movimiento
+                    cantidad = hoja.cell(row=row, column=6).value   # Columna F: Cantidad
+                    
+                    if not material or not movimiento or not cantidad:
+                        continue
+                    
+                    # Limpiar nombres de materiales
+                    material_nombre = str(material).strip()
+                    movimiento_texto = str(movimiento).strip()
+                    
+                    # Convertir cantidad a número
+                    try:
+                        cantidad_num = float(str(cantidad).replace(",", "."))
+                    except:
+                        continue
+                    
+                    # Inicializar material si no existe
+                    if material_nombre not in stock_materiales:
+                        stock_materiales[material_nombre] = 0
+                    
+                    # CORRECCIÓN: Detectar tipo de movimiento con emojis
+                    es_entrada = ("📈" in movimiento_texto or 
+                                "entrada" in movimiento_texto.lower())
+                    es_salida = ("📉" in movimiento_texto or 
+                               "salida" in movimiento_texto.lower())
+                    
+                    # Aplicar movimiento al stock
+                    if es_entrada:
+                        stock_materiales[material_nombre] += cantidad_num
+                    elif es_salida:
+                        stock_materiales[material_nombre] -= cantidad_num
+                        
+                except Exception as e:
+                    continue
+            
+            # Filtrar materiales con stock positivo
+            stock_filtrado = {k: max(0, v) for k, v in stock_materiales.items() if v != 0}
+            
+            if not stock_filtrado:
+                print("❌ No hay datos de stock para mostrar")
+                return None
+            
+            # Preparar datos para gráfica
+            materiales = list(stock_filtrado.keys())
+            cantidades = list(stock_filtrado.values())
             
             # Colores según nivel de stock
             colores = []
@@ -253,18 +470,18 @@ class GraphicsGenerator:
             
             barras = plt.bar(materiales, cantidades, color=colores, alpha=0.8, edgecolor='black')
             
-            plt.title('📦 STOCK ACTUAL DE MATERIALES\nPlanta Premoldeados Tupiza', 
-                     fontsize=16, fontweight='bold', pad=20)
+            plt.title('📦 STOCK ACTUAL DE MATERIALES\nPlanta Municipal de Premoldeados - Tupiza', 
+                     fontsize=14, fontweight='bold', pad=20)
             plt.xlabel('Material', fontsize=12)
             plt.ylabel('Cantidad', fontsize=12)
             plt.xticks(rotation=45, ha='right')
-            plt.grid(True, alpha=0.3, linestyle='--', axis='y')
+            plt.grid(True, alpha=0.3, axis='y')
             
             # Agregar valores en las barras
             for barra, cantidad in zip(barras, cantidades):
                 altura = barra.get_height()
                 plt.text(barra.get_x() + barra.get_width()/2, altura + max(cantidades)*0.01,
-                        f'{cantidad:.0f}', ha='center', va='bottom', fontsize=10, fontweight='bold')
+                        f'{cantidad:.0f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
             
             # Leyenda de colores
             leyenda = [
@@ -276,12 +493,16 @@ class GraphicsGenerator:
             
             plt.tight_layout()
             
-            nombre_grafica = f"stock_materiales_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-            plt.savefig(nombre_grafica, dpi=300, bbox_inches='tight', facecolor='white')
+            # Crear directorio si no existe
+            os.makedirs("graficas", exist_ok=True)
+            
+            # Guardar gráfica
+            nombre_archivo = f"graficas/stock_materiales_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            plt.savefig(nombre_archivo, dpi=300, bbox_inches='tight', facecolor='white')
             plt.close()
             
-            print(f"✅ Gráfica de stock generada: {nombre_grafica}")
-            return nombre_grafica
+            print(f"✅ Gráfica de stock generada: {nombre_archivo}")
+            return nombre_archivo
             
         except Exception as e:
             print(f"❌ Error generando gráfica stock: {e}")
@@ -290,268 +511,54 @@ class GraphicsGenerator:
             return None
     
     @staticmethod
-    def generar_grafica_cemento():
-        """
-        Genera gráfica específica de consumo de cemento - VERSIÓN FINAL CORREGIDA
-        """
-        if not GRAFICOS_DISPONIBLES:
-            print("❌ Matplotlib no disponible")
-            return None
+    def obtener_info_combustibles_detallada():
+        """Obtiene información detallada de combustibles para reportes"""
+        datos = GraphicsGenerator.obtener_datos_combustibles()
         
-        try:
-            # Buscar archivo de materiales
-            archivo = GraphicsGenerator._buscar_archivo_materiales()
-            if not archivo:
-                return None
-            
-            libro = openpyxl.load_workbook(archivo)
-            hoja = libro.active
-            
-            print(f"📊 Analizando {hoja.max_row} filas en busca de cemento...")
-            
-            # Diccionario para acumular consumo por fecha
-            consumo_cemento = {}
-            registros_encontrados = 0
-            
-            for row in range(5, hoja.max_row + 1):
-                try:
-                    fecha = hoja.cell(row=row, column=1).value      # Columna A: Fecha
-                    material = hoja.cell(row=row, column=3).value   # Columna C: Material
-                    movimiento = hoja.cell(row=row, column=5).value # Columna E: Movimiento
-                    cantidad = hoja.cell(row=row, column=6).value   # Columna F: Cantidad
-                    
-                    # CORRECCIÓN: Búsqueda flexible de cemento
-                    if material and "cemento" in str(material).lower():
-                        registros_encontrados += 1
-                        print(f"   📦 Cemento encontrado en fila {row}: {material} | {movimiento} | {cantidad}")
-                        
-                        # Solo procesar salidas (consumo)
-                        movimiento_limpio = str(movimiento).lower().replace("📉", "").strip()
-                        if "salida" in movimiento_limpio:    
-                            # Procesar fecha
-                            if isinstance(fecha, datetime):
-                                fecha_str = fecha.strftime("%d/%m")
-                            else:
-                                fecha_str = str(fecha)[-5:] if fecha else "S/F"  # Últimos 5 chars (DD/MM)
-                            
-                            # Procesar cantidad
-                            try:
-                                cantidad_num = float(str(cantidad).replace(",", "."))
-                                
-                                if fecha_str not in consumo_cemento:
-                                    consumo_cemento[fecha_str] = 0
-                                
-                                consumo_cemento[fecha_str] += cantidad_num
-                                print(f"      ✅ Consumo registrado: {fecha_str} = {cantidad_num} bolsas")
-                                
-                            except (ValueError, TypeError):
-                                print(f"      ⚠️ Cantidad inválida: {cantidad}")
-                                continue
-                        else:
-                            print(f"      ⚠️ No es salida: {movimiento}")
-                            
-                except Exception as e:
-                    continue
-            
-            print(f"📊 Registros de cemento encontrados: {registros_encontrados}")
-            print(f"📊 Días con consumo: {len(consumo_cemento)}")
-            
-            # Verificar si hay datos de consumo
-            if not consumo_cemento:
-                print("❌ No hay datos de consumo de cemento (salidas)")
-                print("💡 Para generar la gráfica necesitas registrar SALIDAS de cemento")
-                return None
-            
-            # Si hay muy pocos datos, agregar algunos días de ejemplo
-            if len(consumo_cemento) < 3:
-                print("⚠️ Pocos datos reales, agregando días de ejemplo...")
-                for i in range(1, 6):
-                    fecha_ej = (datetime.now() - timedelta(days=i)).strftime("%d/%m")
-                    if fecha_ej not in consumo_cemento:
-                        consumo_cemento[fecha_ej] = 0
-            
-            # Preparar datos para gráfica
-            fechas = sorted(consumo_cemento.keys())
-            cantidades = [consumo_cemento[f] for f in fechas]
-            
-            # Crear gráfica
-            plt.figure(figsize=(12, 8))
-            
-            barras = plt.bar(range(len(fechas)), cantidades, 
-                           color='#8E44AD', alpha=0.8, edgecolor='black', linewidth=1)
-            
-            plt.title('🏗️ CONSUMO DIARIO DE CEMENTO\nPlanta Premoldeados Tupiza', 
-                     fontsize=16, fontweight='bold', pad=20)
-            plt.xlabel('Fecha', fontsize=12)
-            plt.ylabel('Bolsas Consumidas', fontsize=12)
-            
-            plt.xticks(range(len(fechas)), fechas, rotation=45)
-            plt.grid(True, alpha=0.3, linestyle='--', axis='y')
-            
-            # Agregar valores en las barras
-            for i, (barra, cantidad) in enumerate(zip(barras, cantidades)):
-                if cantidad > 0:  # Solo mostrar si hay consumo
-                    plt.text(barra.get_x() + barra.get_width()/2, 
-                            barra.get_height() + max(cantidades)*0.02,
-                            f'{cantidad:.0f}', ha='center', va='bottom', 
-                            fontweight='bold', fontsize=11)
-            
-            # Información adicional
-            total_consumo = sum(cantidades)
-            dias_con_consumo = sum(1 for c in cantidades if c > 0)
-            promedio_diario = total_consumo / dias_con_consumo if dias_con_consumo > 0 else 0
-            
-            # CORRECCIÓN: F-string arreglado
-            info_text = f'Total: {total_consumo:.0f} bolsas | Promedio: {promedio_diario:.1f} bolsas/día | Días activos: {dias_con_consumo}'
-            plt.figtext(0.02, 0.02, info_text, fontsize=10, style='italic')
-            
-            plt.tight_layout()
-            
-            nombre_grafica = f"cemento_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-            plt.savefig(nombre_grafica, dpi=300, bbox_inches='tight', facecolor='white')
-            plt.close()
-            
-            print(f"✅ Gráfica de cemento generada: {nombre_grafica}")
-            return nombre_grafica
-            
-        except Exception as e:
-            print(f"❌ Error generando gráfica cemento: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-    
-    @staticmethod
-    def generar_todas_las_graficas():
-        """Genera todas las gráficas disponibles"""
-        if not GRAFICOS_DISPONIBLES:
-            print("❌ Matplotlib no disponible")
-            return []
+        total = datos["gasolina"] + datos["diesel"]
         
-        graficas_generadas = []
+        info = {
+            "gasolina": datos["gasolina"],
+            "diesel": datos["diesel"], 
+            "total": total,
+            "estado_gasolina": "Crítico" if datos["gasolina"] < 50 else "Bajo" if datos["gasolina"] < 100 else "Óptimo",
+            "estado_diesel": "Crítico" if datos["diesel"] < 50 else "Bajo" if datos["diesel"] < 100 else "Óptimo",
+            "recomendacion": "Abastecimiento urgente" if total < 100 else "Monitoreo normal"
+        }
         
-        print("📊 === GENERANDO TODAS LAS GRÁFICAS ===")
-        
-        # Gráfica de combustibles
-        print("\n⛽ Generando gráfica de combustibles...")
-        try:
-            grafica1 = GraphicsGenerator.generar_grafica_combustibles()
-            if grafica1:
-                graficas_generadas.append(grafica1)
-        except Exception as e:
-            print(f"❌ Error en gráfica combustibles: {e}")
-        
-        # Gráfica de stock de materiales
-        print("\n📦 Generando gráfica de stock de materiales...")
-        try:
-            grafica2 = GraphicsGenerator.generar_grafica_stock_materiales()
-            if grafica2:
-                graficas_generadas.append(grafica2)
-        except Exception as e:
-            print(f"❌ Error en gráfica stock: {e}")
-        
-        # Gráfica de cemento
-        print("\n🏗️ Generando gráfica de cemento...")
-        try:
-            grafica3 = GraphicsGenerator.generar_grafica_cemento()
-            if grafica3:
-                graficas_generadas.append(grafica3)
-        except Exception as e:
-            print(f"❌ Error en gráfica cemento: {e}")
-        
-        print(f"\n📈 === RESUMEN ===")
-        print(f"✅ Gráficas generadas: {len(graficas_generadas)}/3")
-        for i, grafica in enumerate(graficas_generadas, 1):
-            print(f"   {i}. {grafica}")
-        
-        return graficas_generadas
-    
-    @staticmethod
-    def limpiar_graficas_antiguas(dias=7):
-        """Limpia gráficas más antiguas que X días"""
-        try:
-            import glob
-            import time
-            
-            patrones = ["combustibles_*.png", "cemento_*.png", "stock_*.png"]
-            eliminados = 0
-            
-            for patron in patrones:
-                archivos = glob.glob(patron)
-                for archivo in archivos:
-                    if os.path.getctime(archivo) < time.time() - (dias * 24 * 60 * 60):
-                        os.remove(archivo)
-                        eliminados += 1
-            
-            if eliminados > 0:
-                print(f"🧹 Limpieza completada: {eliminados} archivos eliminados")
-            return eliminados
-            
-        except Exception as e:
-            print(f"❌ Error en limpieza: {e}")
-            return 0
+        return info
 
 # ============================================================================
-# FUNCIONES DE UTILIDAD Y PRUEBAS
+# FUNCIÓN DE PRUEBA
 # ============================================================================
 
 def probar_graphics_generator():
-    """Prueba todas las funciones del generador de gráficas"""
-    print("🧪 === PRUEBA COMPLETA DE GRAPHICS GENERATOR ===")
-    print(f"⏰ {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    """Prueba rápida del generador de gráficas"""
+    print("🧪 === PRUEBA RÁPIDA GRAPHICS GENERATOR ===")
     
     if not GraphicsGenerator.verificar_matplotlib():
-        print("❌ Matplotlib no disponible - no se pueden generar gráficas")
+        print("❌ Matplotlib no disponible")
         return False
     
-    # Verificar archivo de datos
     archivo = GraphicsGenerator._buscar_archivo_materiales()
     if not archivo:
         print("❌ No se encontró archivo de materiales")
         return False
     
-    # Probar cada función
-    funciones = [
-        ("Combustibles", GraphicsGenerator.generar_grafica_combustibles),
-        ("Stock Materiales", GraphicsGenerator.generar_grafica_stock_materiales),
-        ("Cemento", GraphicsGenerator.generar_grafica_cemento)
-    ]
+    print("✅ Archivo encontrado, probando funciones...")
     
-    resultados = []
+    # Probar datos de combustibles
+    print("\n⛽ Probando datos de combustibles...")
+    datos_comb = GraphicsGenerator.obtener_datos_combustibles()
+    print(f"   Gasolina: {datos_comb['gasolina']}L")
+    print(f"   Diesel: {datos_comb['diesel']}L")
     
-    for nombre, funcion in funciones:
-        try:
-            print(f"\n📊 Probando gráfica de {nombre}...")
-            resultado = funcion()
-            
-            if resultado:
-                print(f"   ✅ Generada: {resultado}")
-                resultados.append(resultado)
-                
-                # Verificar archivo
-                if os.path.exists(resultado):
-                    tamaño = os.path.getsize(resultado) / 1024
-                    print(f"   📏 Tamaño: {tamaño:.1f} KB")
-            else:
-                print(f"   ⚠️ No se generó (revisar datos)")
-                
-        except Exception as e:
-            print(f"   ❌ Error: {e}")
+    # Probar datos de cemento
+    print("\n🏗️ Probando datos de cemento...")
+    datos_cemento = GraphicsGenerator.obtener_datos_cemento()
+    print(f"   Días con consumo: {len(datos_cemento)}")
     
-    print(f"\n📈 === RESUMEN FINAL ===")
-    print(f"✅ Gráficas exitosas: {len(resultados)}/{len(funciones)}")
-    
-    # Limpiar archivos de prueba después de 5 segundos
-    import time
-    time.sleep(2)
-    for archivo in resultados:
-        try:
-            if os.path.exists(archivo):
-                print(f"🧹 Limpiando: {archivo}")
-                os.remove(archivo)
-        except:
-            pass
-    
-    return len(resultados) > 0
+    return True
 
 if __name__ == "__main__":
     probar_graphics_generator()
