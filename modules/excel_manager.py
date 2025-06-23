@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 📊 modules/excel_manager.py - GESTIÓN DE ARCHIVOS EXCEL
 """
@@ -186,25 +188,24 @@ class ExcelManager:
     
     @staticmethod
     def obtener_datos_combustibles():
-        """Obtiene datos específicos de combustibles - EXACTAMENTE TU LÓGICA"""
+        """Obtiene datos específicos de combustibles - CORREGIDO: SIN DATOS FALSOS"""
         stock = ExcelManager.obtener_stock_materiales()
         
         combustibles = {}
         
-        # Buscar gasolina y diesel en el stock
+        # Buscar gasolina y diesel en el stock REAL
         for material, cantidad in stock.items():
             material_lower = material.lower()
             if "gasolina" in material_lower:
-                combustibles["gasolina"] = cantidad
+                combustibles["gasolina"] = max(0, cantidad)  # No permitir negativos
             elif "diesel" in material_lower:
-                combustibles["diesel"] = cantidad
+                combustibles["diesel"] = max(0, cantidad)    # No permitir negativos
         
-        # Si no hay datos, devolver valores por defecto
-        if not combustibles:
-            combustibles = {
-                "gasolina": 40.0,
-                "diesel": 70.0
-            }
+        # CORRECCIÓN: Si no hay datos, devolver ceros (no datos falsos)
+        if "gasolina" not in combustibles:
+            combustibles["gasolina"] = 0.0
+        if "diesel" not in combustibles:
+            combustibles["diesel"] = 0.0
         
         return combustibles
     
