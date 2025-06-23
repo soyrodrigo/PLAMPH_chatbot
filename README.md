@@ -7,7 +7,7 @@ Este repositorio contiene un sistema modular para la gestion de planta y un bot 
 El bot de Telegram necesita un token para funcionar. Para mantenerlo fuera del codigo fuente, configura la variable de entorno `BOT_TOKEN` antes de ejecutar el bot:
 
 ```bash
-export BOT_TOKEN="<tu token aqui>"
+export BOT_TOKEN="8079170530:AAHXC9elAL4CqDgF8Xp5csUw2-0FCaHFcf0"
 python bot_modular.py
 ```
 
