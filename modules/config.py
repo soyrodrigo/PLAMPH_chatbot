@@ -45,8 +45,8 @@ if not os.path.exists(DIRECTORIO_REPORTES):
 # CONFIGURACIÓN DE TELEGRAM (OPCIONAL)
 # ============================================================================
 
-# TOKEN del bot de Telegram (opcional para modo bot)
-TOKEN = "8079170530:AAHXC9elAL4CqDgF8Xp5csUw2-0FCaHFcf0"  # Cambiar por token real si se usa modo bot
+# Se lee desde la variable de entorno BOT_TOKEN para evitar exponerlo en el código
+TOKEN = os.getenv("BOT_TOKEN", "")
 
 # ============================================================================
 # CONFIGURACIÓN DE MATERIALES

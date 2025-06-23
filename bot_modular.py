@@ -67,8 +67,7 @@ except ImportError as e:
 # CONFIGURACIÓN DEL BOT (de config.py + constantes adicionales)
 # =============================================================================
 
-# El token debe estar en modules/config.py
-TOKEN = "8079170530:AAHXC9elAL4CqDgF8Xp5csUw2-0FCaHFcf0"  # Reemplaza con tu token
+# El token se obtiene desde modules.config (variable de entorno BOT_TOKEN)
 
 # Constantes adicionales (en caso de que no estén en config.py)
 try:
@@ -949,11 +948,11 @@ def main():
     print()
     
     # Verificar TOKEN
-    if TOKEN == "TU_TOKEN_AQUI":
+    if not TOKEN:
         print("❌ CONFIGURA EL TOKEN DEL BOT PRIMERO")
         print("1. Ve a @BotFather en Telegram")
         print("2. Crea un nuevo bot o usa uno existente")
-        print("3. Copia el token y reemplázalo en el TOKEN")
+        print("3. Exporta la variable BOT_TOKEN con el valor dado")
         print("4. Ejecuta el script nuevamente")
         return
     
@@ -1001,5 +1000,5 @@ if __name__ == "__main__":
         print(f"\n❌ ERROR CRÍTICO EN SISTEMA MODULAR: {e}")
         print("\n🔧 VERIFICA:")
         print("1. Que todos los módulos estén en modules/")
-        print("2. Que el TOKEN esté configurado correctamente")
+        print("2. Que la variable BOT_TOKEN esté configurada")
         print("3. Que las librerías estén instaladas")
